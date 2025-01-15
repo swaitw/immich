@@ -1,21 +1,22 @@
-import { api } from '@api';
+import { AppRoute } from '$lib/constants';
+import { user } from '$lib/stores/user.store';
+import { authenticate } from '$lib/utils/auth';
+import { getFormatter } from '$lib/utils/i18n';
 import { redirect } from '@sveltejs/kit';
-export const prerender = false;
-
+import { get } from 'svelte/store';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async () => {
-	try {
-		const { data: userInfo } = await api.userApi.getMyUserInfo();
+export const load = (async () => {
+  await authenticate();
+  if (!get(user).shouldChangePassword) {
+    redirect(302, AppRoute.PHOTOS);
+  }
 
-		if (userInfo.shouldChangePassword) {
-			return {
-				user: userInfo
-			};
-		} else {
-			throw redirect(302, '/photos');
-		}
-	} catch (e) {
-		throw redirect(302, '/auth/login');
-	}
-};
+  const $t = await getFormatter();
+
+  return {
+    meta: {
+      title: $t('change_password'),
+    },
+  };
+}) satisfies PageLoad;

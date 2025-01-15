@@ -1,33 +1,77 @@
-import 'package:hive/hive.dart';
+import 'package:immich_mobile/constants/constants.dart';
+import 'package:immich_mobile/entities/album.entity.dart';
+import 'package:immich_mobile/entities/asset.entity.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:openapi/api.dart';
 
-import '../constants/hive_box.dart';
-
 String getThumbnailUrl(
-  final AssetResponseDto asset, {
-  ThumbnailFormat type = ThumbnailFormat.WEBP,
+  final Asset asset, {
+  AssetMediaSize type = AssetMediaSize.thumbnail,
 }) {
-  return _getThumbnailUrl(asset.id, type: type);
+  return getThumbnailUrlForRemoteId(asset.remoteId!, type: type);
+}
+
+String getThumbnailCacheKey(
+  final Asset asset, {
+  AssetMediaSize type = AssetMediaSize.thumbnail,
+}) {
+  return getThumbnailCacheKeyForRemoteId(asset.remoteId!, type: type);
+}
+
+String getThumbnailCacheKeyForRemoteId(
+  final String id, {
+  AssetMediaSize type = AssetMediaSize.thumbnail,
+}) {
+  if (type == AssetMediaSize.thumbnail) {
+    return 'thumbnail-image-$id';
+  } else {
+    return '${id}_previewStage';
+  }
 }
 
 String getAlbumThumbnailUrl(
-  final AlbumResponseDto album, {
-  ThumbnailFormat type = ThumbnailFormat.WEBP,
+  final Album album, {
+  AssetMediaSize type = AssetMediaSize.thumbnail,
 }) {
-  if (album.albumThumbnailAssetId == null) {
+  if (album.thumbnail.value?.remoteId == null) {
     return '';
   }
-  return _getThumbnailUrl(album.albumThumbnailAssetId!, type: type);
+  return getThumbnailUrlForRemoteId(
+    album.thumbnail.value!.remoteId!,
+    type: type,
+  );
 }
 
-String getImageUrl(final AssetResponseDto asset) {
-  final box = Hive.box(userInfoBox);
-  return '${box.get(serverEndpointKey)}/asset/file?aid=${asset.deviceAssetId}&did=${asset.deviceId}&isThumb=false';
+String getAlbumThumbNailCacheKey(
+  final Album album, {
+  AssetMediaSize type = AssetMediaSize.thumbnail,
+}) {
+  if (album.thumbnail.value?.remoteId == null) {
+    return '';
+  }
+  return getThumbnailCacheKeyForRemoteId(
+    album.thumbnail.value!.remoteId!,
+    type: type,
+  );
 }
 
-String _getThumbnailUrl(final String id,
-    {ThumbnailFormat type = ThumbnailFormat.WEBP}) {
-  final box = Hive.box(userInfoBox);
+String getOriginalUrlForRemoteId(final String id) {
+  return '${Store.get(StoreKey.serverEndpoint)}/assets/$id/original';
+}
 
-  return '${box.get(serverEndpointKey)}/asset/thumbnail/${id}?format=${type.value}';
+String getImageCacheKey(final Asset asset) {
+  // Assets from response DTOs do not have an isar id, querying which would give us the default autoIncrement id
+  final isFromDto = asset.id == noDbId;
+  return '${isFromDto ? asset.remoteId : asset.id}_fullStage';
+}
+
+String getThumbnailUrlForRemoteId(
+  final String id, {
+  AssetMediaSize type = AssetMediaSize.thumbnail,
+}) {
+  return '${Store.get(StoreKey.serverEndpoint)}/assets/$id/thumbnail?size=${type.value}';
+}
+
+String getFaceThumbnailUrl(final String personId) {
+  return '${Store.get(StoreKey.serverEndpoint)}/people/$personId/thumbnail';
 }
